@@ -7,18 +7,20 @@
 //
 
 #import "RNPinchableView.h"
+@interface RNPinchableView ()
 
-@implementation RNPinchableView
-
-BOOL isActive = NO;
-NSUInteger lastNumberOfTouches;
-UIView *initialSuperView;
-NSUInteger initialIndex;
-CGRect initialFrame;
-CGPoint initialTouchPoint;
-CGPoint initialAnchorPoint;
-CGPoint lastTouchPoint;
-UIView *backgroundView;
+@property (weak ) UIView *initialSuperView;
+@property (weak ) UIView *backgroundView;
+@end
+@implementation RNPinchableView {
+    BOOL isActive;
+    NSUInteger lastNumberOfTouches;
+    NSUInteger initialIndex;
+    CGRect initialFrame;
+    CGPoint initialTouchPoint;
+    CGPoint initialAnchorPoint;
+    CGPoint lastTouchPoint;
+}
 
 - (instancetype)initWithFrame:(CGRect)frame
 {
@@ -35,13 +37,13 @@ UIView *backgroundView;
 {
   isActive = NO;
   lastNumberOfTouches = 0;
-  initialSuperView = nil;
+  self.initialSuperView = nil;
   initialIndex = -1;
   initialFrame = CGRectZero;
   initialTouchPoint = CGPointZero;
   initialAnchorPoint = CGPointZero;
   lastTouchPoint = CGPointZero;
-  backgroundView = nil;
+  self.backgroundView = nil;
 }
 
 - (void)setupGesture
@@ -65,33 +67,47 @@ UIView *backgroundView;
   return YES;
 }
 
+-(UIWindow*)keyWindow
+{
+    UIWindow        *foundWindow = nil;
+    NSArray         *windows = [[UIApplication sharedApplication]windows];
+    for (UIWindow   *window in windows) {
+        if (window.isKeyWindow) {
+            foundWindow = window;
+            break;
+        }
+    }
+    return foundWindow;
+}
+
 - (void)handlePinchGesture:(UIPinchGestureRecognizer *)gestureRecognizer
 {
   UIView *view = gestureRecognizer.view;
-  UIWindow *window = UIApplication.sharedApplication.keyWindow;
+  UIWindow * window = [self keyWindow];
   if (gestureRecognizer.state == UIGestureRecognizerStateBegan) {
     lastNumberOfTouches = gestureRecognizer.numberOfTouches;
     initialFrame = view.frame;
     initialTouchPoint = [gestureRecognizer locationInView:window];
     isActive = YES;
-    initialSuperView = view.superview;
-    initialIndex = [initialSuperView.subviews indexOfObject:view];
+    self.initialSuperView = view.superview;
+    initialIndex = [self.initialSuperView.subviews indexOfObject:view];
     initialAnchorPoint = view.layer.anchorPoint;
     
     CGPoint center = [gestureRecognizer locationInView:view];
     CGPoint absoluteOrigin = [view.superview convertPoint:view.frame.origin toView:window];
     CGPoint anchorPoint = CGPointMake(center.x/initialFrame.size.width, center.y/initialFrame.size.height);
 
-    backgroundView = [UIView new];
-    backgroundView.backgroundColor = UIColor.blackColor;
-    backgroundView.frame = window.frame;
-    [window addSubview:backgroundView];
+    UIView * temp = [UIView new];
+    self.backgroundView = temp;
+    self.backgroundView.backgroundColor = UIColor.blackColor;
+    self.backgroundView.frame = window.frame;
+    [window addSubview:self.backgroundView];
     [window addSubview:view];
     
     view.layer.anchorPoint = anchorPoint;
     view.center = center;
     view.frame = CGRectMake(absoluteOrigin.x, absoluteOrigin.y, initialFrame.size.width, initialFrame.size.height);
-    [initialSuperView setNeedsLayout];
+    [self.initialSuperView setNeedsLayout];
     [view setNeedsLayout];
   }
   
@@ -115,7 +131,7 @@ UIView *backgroundView;
     transform = CGAffineTransformScale(transform, scale, scale);
     view.transform = transform;
     
-    backgroundView.layer.opacity = MIN(scale - 1., .7);
+    self.backgroundView.layer.opacity = MIN(scale - 1., .7);
     lastTouchPoint = currentTouchPoint;
   }
 
@@ -123,10 +139,10 @@ UIView *backgroundView;
       gestureRecognizer.state == UIGestureRecognizerStateCancelled) {
     [UIView animateWithDuration:0.4 delay:0. usingSpringWithDamping:1 initialSpringVelocity:.6 options:0 animations:^{
       gestureRecognizer.view.transform = CGAffineTransformIdentity;
-      backgroundView.layer.opacity = 0.;
+      self.backgroundView.layer.opacity = 0.;
     } completion:^(BOOL finished) {
-      [backgroundView removeFromSuperview];
-      [initialSuperView insertSubview:view atIndex:initialIndex];
+      [self.backgroundView removeFromSuperview];
+      [self.initialSuperView insertSubview:view atIndex:initialIndex];
       view.layer.anchorPoint = initialAnchorPoint;
       view.frame = initialFrame;
       [self resetGestureState];
